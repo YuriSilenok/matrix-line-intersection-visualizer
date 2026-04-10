@@ -133,6 +133,13 @@ class MatrixDrawer:
             
             # Высота текущей матрицы
             matrix_height = rows * self.cell_size
+
+            # Рисуем границу матрицы
+            x1 = current_x
+            y1 = start_y + (max_height - matrix_height)
+            x2 = current_x  + self.cell_size * cols
+            y2 = start_y + max_height
+            self.canvas.create_rectangle(x1, y1, x2, y2, outline='black', fill='', width=2)
             
             # Y-координата для выравнивания по нижнему краю
             matrix_start_y = start_y + (max_height - matrix_height)
