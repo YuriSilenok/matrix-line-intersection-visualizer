@@ -17,6 +17,7 @@ class MatrixDrawer:
         self.points = []   # список точек (x, y)
         self.lines = []    # список линий (id на canvas)
         self.hover_circle = None
+        self.gray_circles = set()  # множество ID кругов, которые под линией
         
         # Настройка canvas
         self.canvas = tk.Canvas(root, bg='white', highlightthickness=0)
@@ -86,6 +87,92 @@ class MatrixDrawer:
         
         return min(cell_by_width, cell_by_height)
     
+    def is_point_below_line(self, point, line_start, line_end):
+        """Проверяет, находится ли точка под линией"""
+        x0, y0 = line_start
+        x1, y1 = line_end
+        x, y = point
+        
+
+        if x0 < x1 and (x < x0 or x > x1):
+            return False
+        if x1 < x0 and (x < x1 or x > x0):
+            return False
+        if y0 < y1 and (y < y0 or y > y1):
+            return False
+        if y1 < y0 and (y < y1 or y > y0):
+            return False
+
+        # Если линия вертикальная
+        if x1 - x0 == 0:
+            return x > x0
+        
+        # Вычисляем значение y на линии при заданном x
+        # Уравнение прямой: y = k * (x - x0) + y0
+        k = (y1 - y0) / (x1 - x0)
+        y_on_line = k * (x - x0) + y0
+        
+        # Точка под линией, если её y больше y на линии (при стандартной системе координат canvas,
+        # где y увеличивается вниз)
+        return y > y_on_line
+    
+    def update_gray_circles(self):
+        """Обновляет список кругов, находящихся под линиями"""
+        if len(self.points) < 2:
+            # Очищаем серые круги, если линий нет
+            for circle_id in self.gray_circles:
+                for circle_data in self.circles:
+                    if circle_data['id'] == circle_id:
+                        self.canvas.itemconfig(circle_id, fill='white')
+                        break
+            self.gray_circles.clear()
+            return
+        
+        # Собираем все круги, которые находятся под любой линией
+        circles_under_lines = set()
+        
+        # Для каждого отрезка линии
+        for i in range(len(self.points) - 1):
+            line_start = self.points[i]
+            line_end = self.points[i + 1]
+            
+            # Проверяем каждый круг
+            for circle_data in self.circles:
+                center = circle_data['center']
+                
+                # Проверяем, находится ли центр круга под линией
+                real_line_start = line_start[0], line_start[1] + self.cell_size / 4
+                real_line_end = line_end[0], line_end[1] + self.cell_size / 4
+                if self.is_point_below_line(center, real_line_start, real_line_end):
+                    circles_under_lines.add(circle_data['id'])
+        
+        # Обновляем цвета кругов
+        # Сначала сбрасываем все круги на белый
+        for circle_data in self.circles:
+            if circle_data['id'] not in self.gray_circles:
+                # Если круг не был серым, сбрасываем на белый
+                if self.hover_circle != circle_data['id']:
+                    self.canvas.itemconfig(circle_data['id'], fill='white')
+        
+        # Затем красим серым круги под линиями
+        for circle_id in circles_under_lines:
+            for circle_data in self.circles:
+                if circle_data['id'] == circle_id:
+                    # Не перекрашиваем, если это подсвеченный круг
+                    if self.hover_circle != circle_id:
+                        self.canvas.itemconfig(circle_id, fill='lightgray')
+                    break
+        
+        # Обновляем множество серых кругов
+        self.gray_circles = circles_under_lines
+        
+        # Если есть подсвеченный круг и он должен быть серым, но не перекрашиваем его
+        if self.hover_circle and self.hover_circle in self.gray_circles:
+            for circle_data in self.circles:
+                if circle_data['id'] == self.hover_circle:
+                    self.canvas.itemconfig(self.hover_circle, fill='lightgreen')
+                    break
+    
     def draw_all_matrices(self):
         """Отрисовка всех матриц на одном canvas"""
         if not self.matrices:
@@ -100,6 +187,7 @@ class MatrixDrawer:
         self.points = []
         self.lines = []
         self.hover_circle = None
+        self.gray_circles = set()
         
         # Вычисляем размер ячейки
         self.cell_size = self.calculate_cell_size()
@@ -204,6 +292,9 @@ class MatrixDrawer:
                 point[0] + 4, point[1] + 4,
                 fill='black', outline='black'
             )
+        
+        # Обновляем серые круги после перерисовки линий
+        self.update_gray_circles()
     
     def on_mouse_move(self, event):
         """Обработка движения мыши для подсветки круга"""
@@ -223,10 +314,11 @@ class MatrixDrawer:
                 if self.hover_circle != circle_data['id']:
                     # Сбрасываем предыдущую подсветку
                     if self.hover_circle:
-                        for cd in self.circles:
-                            if cd['id'] == self.hover_circle:
-                                self.canvas.itemconfig(cd['id'], fill='white')
-                                break
+                        # Возвращаем предыдущий круг к правильному цвету
+                        if self.hover_circle in self.gray_circles:
+                            self.canvas.itemconfig(self.hover_circle, fill='lightgray')
+                        else:
+                            self.canvas.itemconfig(self.hover_circle, fill='white')
                     
                     # Подсвечиваем новый круг
                     self.canvas.itemconfig(circle_data['id'], fill='lightgreen')
@@ -240,10 +332,11 @@ class MatrixDrawer:
         
         # Если курсор не над кругом, сбрасываем подсветку
         if self.hover_circle:
-            for circle_data in self.circles:
-                if circle_data['id'] == self.hover_circle:
-                    self.canvas.itemconfig(circle_data['id'], fill='white')
-                    break
+            # Возвращаем круг к правильному цвету
+            if self.hover_circle in self.gray_circles:
+                self.canvas.itemconfig(self.hover_circle, fill='lightgray')
+            else:
+                self.canvas.itemconfig(self.hover_circle, fill='white')
             self.hover_circle = None
             total_matrices = len(self.matrices)
             self.info_label.config(text=f"Total matrices: {total_matrices} | Cell size: {self.cell_size:.1f}px")
