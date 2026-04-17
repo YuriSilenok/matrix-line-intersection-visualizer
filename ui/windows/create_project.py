@@ -1,4 +1,4 @@
-from tkinter import Toplevel, Label, StringVar, Button, Frame
+from tkinter import Toplevel, Label, StringVar, Button, Frame, messagebox
 from tkinter.ttk import Spinbox
 
 from ui.windows.utils import center_window
@@ -13,7 +13,9 @@ class CreateProject(Toplevel):
         self.number_longitudinal_layers_label = Label(self, text='Количество продольных слоёв')
         self.number_longitudinal_layers_label.grid(row=0, column=0, sticky="e", padx=5, pady=5)
 
-        self.number_longitudinal_layers = Spinbox(self, from_=1, to=10, width=10, textvariable=StringVar(value='4'))
+        self.number_longitudinal_layers = Spinbox(
+            self, from_=1, to=10, width=10, textvariable=StringVar(value='4'),
+            command=self.number_longitudinal_layers_change_handler)
         self.number_longitudinal_layers.insert(0, "4")
         self.number_longitudinal_layers.grid(row=0, column=1, sticky="w", padx=5, pady=5)
 
@@ -37,7 +39,6 @@ class CreateProject(Toplevel):
         self.create_button = Button(self.buttons, text='Создать', command=self.create_handler)
         self.create_button.grid(row=0, column=1, padx=3, pady=3)
 
-
         # настройка окна
         self.geometry('400x100')
         self.minsize(width=400, height=100)
@@ -51,5 +52,13 @@ class CreateProject(Toplevel):
         self.destroy()
 
     def create_handler(self):
-
         self.cancel_handler()
+
+    def number_longitudinal_layers_change_handler(self):
+        print(type(self.number_longitudinal_layers.get()))
+        try:
+            number_longitudinal_layers = int(self.number_longitudinal_layers.get())
+        except ValueError as ex:
+            messagebox.showerror(
+                title=str(ex),
+                message="Количество продольных слоев должно задаваться целым числом")
