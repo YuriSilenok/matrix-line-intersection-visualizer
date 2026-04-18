@@ -8,5 +8,7 @@ class Home(tk.Tk):
 
         super().__init__()
         self.title('Слойка')
-        self.geometry('1920x1080')
+        self.geometry('1280x720')
         self.menu = Menu(self)
+
+        self.menu.create_project()

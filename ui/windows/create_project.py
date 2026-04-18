@@ -9,15 +9,30 @@ class CreateProject(Toplevel):
         super().__init__(parent)
         self.parent = parent
 
+        self.data = {
+            'number_longitudinal_layers': 4,
+            'longitudinal_sublayers': {
+                1: 2,
+                2: 2,
+                3: 2,
+                4: 2,
+            },
+        }
+
         # Количество продольных слоёв
+        self.number_longitudinal_layers = StringVar(
+            value=str(self.data['number_longitudinal_layers']),
+            name='Количество продольных слоёв')
+        self.number_longitudinal_layers.trace('w', self.int_validate)
+
         self.number_longitudinal_layers_label = Label(self, text='Количество продольных слоёв')
         self.number_longitudinal_layers_label.grid(row=0, column=0, sticky="e", padx=5, pady=5)
 
-        self.number_longitudinal_layers = Spinbox(
-            self, from_=1, to=10, width=10, textvariable=StringVar(value='4'),
-            command=self.number_longitudinal_layers_change_handler)
-        self.number_longitudinal_layers.insert(0, "4")
-        self.number_longitudinal_layers.grid(row=0, column=1, sticky="w", padx=5, pady=5)
+        self.number_longitudinal_layers_spinbox = Spinbox(
+            self, from_=1, to=10, width=10,
+            textvariable=self.number_longitudinal_layers)
+
+        self.number_longitudinal_layers_spinbox.grid(row=0, column=1, sticky="w", padx=5, pady=5)
 
         # Количество поперечных слоёв
         self.number_transverse_layers_label = Label(self, text='Количество поперечных слоёв')
@@ -48,17 +63,21 @@ class CreateProject(Toplevel):
         self.focus_set()
         self.wait_window(self)
 
+
     def cancel_handler(self):
         self.destroy()
 
     def create_handler(self):
         self.cancel_handler()
 
-    def number_longitudinal_layers_change_handler(self):
-        print(type(self.number_longitudinal_layers.get()))
+    def number_longitudinal_layers_change(self, *args):
+        self
+
+    def int_validate(self, *args):
+        print(args)
         try:
-            number_longitudinal_layers = int(self.number_longitudinal_layers.get())
+            return int(self.number_longitudinal_layers_spinbox.get())
         except ValueError as ex:
             messagebox.showerror(
                 title=str(ex),
-                message="Количество продольных слоев должно задаваться целым числом")
+                message=f"{args[0]} должно задаваться целым числом")
